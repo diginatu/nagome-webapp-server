@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"sync"
 	"unicode/utf8"
 
 	"golang.org/x/net/websocket"
@@ -16,11 +17,14 @@ const (
 )
 
 var (
-	ngmr io.ReadCloser
-	ngmw io.WriteCloser
+	ngmr      io.ReadCloser
+	ngmw      io.WriteCloser
+	wscs      []*websocket.Conn
+	mu        sync.Mutex
+	connected = make(chan struct{})
 )
 
-func utf8SafeCopy(dst io.Writer, src io.Reader) (written int64, err error) {
+func utf8SafeWrite(src io.Reader) error {
 	var utf8tmp []byte
 	buf := make([]byte, 32*1024)
 
@@ -52,42 +56,64 @@ read:
 					}
 				}
 			}
-			nw, ew := dst.Write(rb)
-			if nw > 0 {
-				written += int64(nw)
+
+			mu.Lock()
+			fmt.Println(wscs)
+			for _, c := range wscs {
+				if c == nil {
+					continue
+				}
+				nw, ew := c.Write(rb)
+				if ew != nil {
+					fmt.Println(ew)
+					continue
+				}
+				if nr != nw {
+					err := io.ErrShortWrite
+					fmt.Println(err)
+					continue
+				}
 			}
-			if ew != nil {
-				err = ew
-				break
-			}
-			if nr != nw {
-				err = io.ErrShortWrite
-				break
-			}
+			mu.Unlock()
 		}
 		if er == io.EOF {
-			break
+			return nil
 		}
 		if er != nil {
-			err = er
-			break
+			return er
 		}
 	}
-	return written, err
+
+	return nil
 }
 
 // BridgeServer receive a connection
 func BridgeServer(wsc *websocket.Conn) {
 	fmt.Println("connected to a client")
-	go func() {
-		_, err := io.Copy(ngmw, wsc)
-		if err != nil {
-			fmt.Println(err)
-			return
+	var no int
+
+	mu.Lock()
+	bl := false
+	for i, v := range wscs {
+		if v == nil {
+			no = i
+			wscs[i] = wsc
+			bl = true
+			break
 		}
+	}
+	if !bl {
+		no = len(wscs)
+		wscs = append(wscs, wsc)
+	}
+	mu.Unlock()
+	defer func() {
+		mu.Lock()
+		wscs[no] = nil
+		mu.Unlock()
 	}()
 
-	_, err := utf8SafeCopy(wsc, ngmr)
+	_, err := io.Copy(ngmw, wsc)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -119,6 +145,13 @@ func main() {
 	}
 
 	fmt.Println("http://localhost:" + defaultPort + "/app")
+
+	go func() {
+		err = utf8SafeWrite(ngmr)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
 
 	// serve
 	http.Handle("/ws", websocket.Handler(BridgeServer))
