@@ -1,6 +1,7 @@
 {
     "port": "8753",
-    "root_address": "http://localhost:8753/app/index.htm",
+    "root_uri": "http://localhost:8753/app/index.htm",
+    "root_dir": "./app",
     "nagome_exec": [
         "nagome",
         "-y",

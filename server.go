@@ -28,9 +28,10 @@ var (
 
 // Config is struct for server_config.json
 type Config struct {
-	Port        string   `json:"port"`
-	RootAddress string   `json:"root_address"`
-	NagomeExec  []string `json:"nagome_exec"`
+	Port       string   `json:"port"`
+	RootURI    string   `json:"root_uri"`
+	RootDir    string   `json:"root_dir"`
+	NagomeExec []string `json:"nagome_exec"`
 }
 
 func utf8SafeWrite(src io.Reader) error {
@@ -168,7 +169,7 @@ func main() {
 		return
 	}
 
-	fmt.Println(c.RootAddress)
+	fmt.Println(c.RootURI)
 
 	go func() {
 		err = utf8SafeWrite(ngmr)
@@ -179,7 +180,7 @@ func main() {
 
 	// serve
 	http.Handle("/ws", websocket.Handler(BridgeServer))
-	http.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir("./app"))))
+	http.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir(c.RootDir))))
 	err = http.ListenAndServe(":"+c.Port, nil)
 	if err != nil {
 		panic("ListenAndServe: " + err.Error())
