@@ -1,0 +1,9 @@
+{
+    "port": "8753",
+    "root_address": "http://localhost:8753/app/index.htm",
+    "nagome_exec": [
+        "nagome",
+        "-y",
+        "./plugin.yml"
+    ]
+}

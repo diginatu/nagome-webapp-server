@@ -1,12 +1,11 @@
 name: webapp_template
-description: serve a web app UI using websocket
+description: Sample plugin that serves a web app UI using websocket
 version: "1.0"
 author: diginatu
-method: tcp
+method: std
 exec:
-- '{{path}}/server'
-- '{{port}}'
-- '{{no}}'
 nagomever: ""
 depends:
 - nagome
+- nagome_ui
+- nagome_comment

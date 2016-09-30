@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"sync"
 	"unicode/utf8"
@@ -23,6 +25,13 @@ var (
 	mu        sync.Mutex
 	connected = make(chan struct{})
 )
+
+// Config is struct for server_config.json
+type Config struct {
+	Port        string   `json:"port"`
+	RootAddress string   `json:"root_address"`
+	NagomeExec  []string `json:"nagome_exec"`
+}
 
 func utf8SafeWrite(src io.Reader) error {
 	var utf8tmp []byte
@@ -58,7 +67,6 @@ read:
 			}
 
 			mu.Lock()
-			fmt.Println(wscs)
 			for _, c := range wscs {
 				if c == nil {
 					continue
@@ -124,8 +132,24 @@ func BridgeServer(wsc *websocket.Conn) {
 func main() {
 	var err error
 
+	file, err := os.Open("./server_config.json")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	d := json.NewDecoder(file)
+	var c Config
+	if err = d.Decode(&c); err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	// connect to Nagome
-	cmd := exec.Command("nagome")
+	if len(c.NagomeExec) == 0 {
+		fmt.Println("NagomeExec has not any command")
+		return
+	}
+	cmd := exec.Command(c.NagomeExec[0], c.NagomeExec[1:]...)
 	ngmw, err = cmd.StdinPipe()
 	if err != nil {
 		log.Println(err)
@@ -144,7 +168,7 @@ func main() {
 		return
 	}
 
-	fmt.Println("http://localhost:" + defaultPort + "/app")
+	fmt.Println(c.RootAddress)
 
 	go func() {
 		err = utf8SafeWrite(ngmr)
@@ -156,7 +180,7 @@ func main() {
 	// serve
 	http.Handle("/ws", websocket.Handler(BridgeServer))
 	http.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir("./app"))))
-	err = http.ListenAndServe(":"+defaultPort, nil)
+	err = http.ListenAndServe(":"+c.Port, nil)
 	if err != nil {
 		panic("ListenAndServe: " + err.Error())
 	}
