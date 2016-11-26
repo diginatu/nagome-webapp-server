@@ -202,6 +202,7 @@ func main() {
 
 	go func() {
 		io.Copy(os.Stderr, ngme)
+		os.Exit(0)
 	}()
 
 	go func() {
@@ -218,7 +219,7 @@ func main() {
 			select {
 			case <-time.After(time.Minute):
 				fmt.Println("closing...\nNot connected a while")
-				return
+				os.Exit(0)
 			case <-connected:
 			}
 			// quit when all clients are disconnected
@@ -227,7 +228,7 @@ func main() {
 				select {
 				case <-time.After(2 * time.Second):
 					fmt.Println("closing...\nAll clients are disconnected")
-					return
+					os.Exit(0)
 				case <-connected:
 				}
 			}
