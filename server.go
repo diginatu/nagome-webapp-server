@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -177,30 +176,30 @@ func main() {
 	cmd := exec.Command(c.NagomeExec[0], c.NagomeExec[1:]...)
 	ngmw, err = cmd.StdinPipe()
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return
 	}
 	defer ngmw.Close()
 	ngmr, err = cmd.StdoutPipe()
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return
 	}
 	defer ngmr.Close()
+	ngme, err := cmd.StderrPipe()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer ngme.Close()
 	err = cmd.Start()
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return
 	}
 
 	fmt.Println(c.RootURI)
 
-	ngme, err := cmd.StderrPipe()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	defer ngme.Close()
 	go func() {
 		io.Copy(os.Stderr, ngme)
 	}()
