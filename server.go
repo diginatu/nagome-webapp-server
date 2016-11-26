@@ -195,6 +195,16 @@ func main() {
 
 	fmt.Println(c.RootURI)
 
+	ngme, err := cmd.StderrPipe()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer ngme.Close()
+	go func() {
+		io.Copy(os.Stderr, ngme)
+	}()
+
 	go func() {
 		err = utf8SafeWrite(ngmr)
 		if err != nil {
@@ -209,7 +219,7 @@ func main() {
 			select {
 			case <-time.After(time.Minute):
 				fmt.Println("closing...\nNot connected a while")
-				os.Exit(0)
+				return
 			case <-connected:
 			}
 			// quit when all clients are disconnected
@@ -218,7 +228,7 @@ func main() {
 				select {
 				case <-time.After(2 * time.Second):
 					fmt.Println("closing...\nAll clients are disconnected")
-					os.Exit(0)
+					return
 				case <-connected:
 				}
 			}
