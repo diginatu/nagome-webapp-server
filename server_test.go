@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	"golang.org/x/net/websocket"
@@ -65,7 +66,12 @@ func TestMultiConnection(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer ws.Close()
+			defer func() {
+				err := ws.Close()
+				if err != nil {
+					t.Fatal(err)
+				}
+			}()
 
 			var msg = make([]byte, 512)
 			var n int
@@ -81,6 +87,7 @@ func TestMultiConnection(t *testing.T) {
 
 	// Wait for connection of all clients
 	writewg.Wait()
+	<-time.After(500 * time.Millisecond)
 
 	tn.buf <- bytes.NewBufferString(testString)
 	// Test for after being disconnected
