@@ -170,7 +170,7 @@ func main() {
 
 	// connect to Nagome
 	if len(c.NagomeExec) == 0 {
-		fmt.Println("NagomeExec has not any command")
+		fmt.Println("No command in NagomeExec.")
 		return
 	}
 	cmd := exec.Command(c.NagomeExec[0], c.NagomeExec[1:]...)
@@ -219,7 +219,7 @@ func main() {
 			select {
 			case <-time.After(time.Minute):
 				fmt.Println("closing...\nNot connected a while")
-				os.Exit(0)
+				ngmw.Close()
 			case <-connected:
 			}
 			// quit when all clients are disconnected
@@ -228,7 +228,7 @@ func main() {
 				select {
 				case <-time.After(2 * time.Second):
 					fmt.Println("closing...\nAll clients are disconnected")
-					os.Exit(0)
+					ngmw.Close()
 				case <-connected:
 				}
 			}
