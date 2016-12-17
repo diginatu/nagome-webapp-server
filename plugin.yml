@@ -1,7 +1,7 @@
-name: webapp_template
+name: WebappTemplate
 description: Sample plugin that serves a web app UI using websocket
 version: "1.0"
-author: diginatu
+author: Diginatu
 method: std
 exec:
 nagomever: ""
