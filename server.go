@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"runtime"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -110,17 +109,6 @@ func BridgeServer(wsc *websocket.Conn) {
 		default:
 		}
 	}
-
-	memStats := &runtime.MemStats{}
-	runtime.ReadMemStats(memStats)
-	fmt.Println("goroutines", (runtime.NumGoroutine()))
-	fmt.Println("memory.allocated", (memStats.Alloc))
-	fmt.Println("memory.mallocs", (memStats.Mallocs))
-	fmt.Println("memory.frees", (memStats.Frees))
-	fmt.Println("memory.heap", (memStats.HeapAlloc))
-	fmt.Println("memory.stack", (memStats.StackInuse))
-	fmt.Println("writer array", wscs)
-	fmt.Println()
 
 	var no int
 
