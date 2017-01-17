@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -190,6 +191,13 @@ func main() {
 
 	go func() {
 		io.Copy(os.Stderr, ngme)
+	}()
+
+	go func() {
+		io.Copy(ioutil.Discard, os.Stdin)
+		ngmw.Close()
+		cmd.Wait()
+		fmt.Println("cmd end")
 		os.Exit(0)
 	}()
 
