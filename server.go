@@ -27,6 +27,7 @@ var (
 	connected = make(chan struct{})
 	clientswg sync.WaitGroup
 	appMode   bool
+	quit      = make(chan struct{})
 )
 
 // Config is struct for server_config.json
@@ -195,6 +196,12 @@ func main() {
 
 	go func() {
 		io.Copy(ioutil.Discard, os.Stdin)
+		close(quit)
+	}()
+
+	// wait for quit
+	go func() {
+		<-quit
 		ngmw.Close()
 		cmd.Wait()
 		fmt.Println("cmd end")
@@ -215,7 +222,7 @@ func main() {
 			select {
 			case <-time.After(time.Minute):
 				fmt.Println("closing...\nNot connected a while")
-				ngmw.Close()
+				close(quit)
 			case <-connected:
 			}
 			// quit when all clients are disconnected
@@ -224,7 +231,7 @@ func main() {
 				select {
 				case <-time.After(2 * time.Second):
 					fmt.Println("closing...\nAll clients are disconnected")
-					ngmw.Close()
+					close(quit)
 				case <-connected:
 				}
 			}
