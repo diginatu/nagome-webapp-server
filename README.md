@@ -1,9 +1,7 @@
-WebApp template
-===============
+WebApp server
+=============
 
-Template of web application as Nagome UI.
-
-This program serves HTTP and WebSocket server for a web application.
+This server program serves HTTP and WebSocket server for a web application of Nagome UI.
 
 Usage
 -----
