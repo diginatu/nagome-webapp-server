@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -79,12 +81,12 @@ read:
 				}
 				nw, ew := c.Write(rb)
 				if ew != nil {
-					fmt.Println(ew)
+					log.Println(ew)
 					continue
 				}
 				if nr != nw {
 					err := io.ErrShortWrite
-					fmt.Println(err)
+					log.Println(err)
 					continue
 				}
 			}
@@ -137,55 +139,73 @@ func BridgeServer(wsc *websocket.Conn) {
 
 	_, err := io.Copy(ngmw, wsc)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 }
 
-// This example demonstrates a trivial echo server.
-func main() {
-	var err error
+func loadConfig() (*Config, error) {
+	// Parse flags
+	f := flag.NewFlagSet("nagome-webapp-server", flag.ContinueOnError)
+	configPath := f.String("c", "./server_config.json", "Path to the config file")
+	printHelp := f.Bool("h", false, "Print this help.")
 
-	file, err := os.Open("./server_config.json")
+	err := f.Parse(os.Args[1:])
 	if err != nil {
-		fmt.Println(err)
-		return
+		return nil, err
+	}
+
+	if *printHelp {
+		f.Usage()
+		return nil, nil
+	}
+
+	// Load config file
+	file, err := os.Open(*configPath)
+	if err != nil {
+		return nil, err
 	}
 	d := json.NewDecoder(file)
 	var c Config
 	if err = d.Decode(&c); err != nil {
-		fmt.Println(err)
-		return
+		return nil, fmt.Errorf("server config error %s", err)
+	}
+
+	return &c, nil
+}
+
+func cli() error {
+	c, err := loadConfig()
+	if err != nil {
+		return err
+	} else if c == nil {
+		// Exit for printting help
+		return nil
 	}
 
 	// connect to Nagome
 	if len(c.NagomeExec) == 0 {
-		fmt.Println("No command in NagomeExec.")
-		return
+		return fmt.Errorf("no command in NagomeExec")
 	}
 	cmd := exec.Command(c.NagomeExec[0], c.NagomeExec[1:]...)
 	ngmw, err = cmd.StdinPipe()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 	defer ngmw.Close()
 	ngmr, err = cmd.StdoutPipe()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 	defer ngmr.Close()
 	ngme, err := cmd.StderrPipe()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 	defer ngme.Close()
 	err = cmd.Start()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
 	fmt.Println(c.RootURI)
@@ -211,7 +231,7 @@ func main() {
 	go func() {
 		err = utf8SafeWrite(ngmr)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}()
 
@@ -244,5 +264,16 @@ func main() {
 	err = http.ListenAndServe(":"+c.Port, nil)
 	if err != nil {
 		panic("ListenAndServe: " + err.Error())
+	}
+
+	return nil
+}
+
+// This example demonstrates a trivial echo server.
+func main() {
+	err := cli()
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
 	}
 }
