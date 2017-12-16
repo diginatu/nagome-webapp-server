@@ -19,10 +19,6 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-const (
-	defaultPort = "8753"
-)
-
 var (
 	ngmr      io.ReadCloser
 	ngmw      io.WriteCloser
@@ -52,7 +48,7 @@ read:
 		// append utf8tmp to the top of buf
 		copy(buf, utf8tmp)
 		// read into the rest buf
-		nr, er := src.Read(buf[len(utf8tmp):])
+		nr, err := src.Read(buf[len(utf8tmp):])
 		nr += len(utf8tmp)
 		utf8tmp = utf8tmp[0:0]
 		if nr > 0 {
@@ -60,7 +56,7 @@ read:
 			if !utf8.Valid(rb) {
 				for i := 1; ; i++ {
 					if i > 4 {
-						panic("invalid data (not utf-8)")
+						return fmt.Errorf("invalid data (not utf-8)")
 					}
 					if i == nr {
 						utf8tmp = make([]byte, i)
@@ -94,11 +90,11 @@ read:
 			}
 			mu.Unlock()
 		}
-		if er == io.EOF {
+		if err == io.EOF {
 			return nil
 		}
-		if er != nil {
-			return er
+		if err != nil {
+			return fmt.Errorf("websocket read: %s", err.Error())
 		}
 	}
 
@@ -211,19 +207,27 @@ func cli() error {
 	}
 
 	go func() {
-		io.Copy(os.Stderr, ngme)
+		_, _ = io.Copy(os.Stderr, ngme)
 	}()
 
 	go func() {
-		io.Copy(ioutil.Discard, os.Stdin)
+		_, _ = io.Copy(ioutil.Discard, os.Stdin)
 		close(quit)
 	}()
 
 	// wait for quit
 	go func() {
 		<-quit
-		ngmw.Close()
-		cmd.Wait()
+		err := ngmw.Close()
+		if err != nil {
+			log.Println("nagome connection close: ", err)
+			os.Exit(1)
+		}
+		err = cmd.Wait()
+		if err != nil {
+			log.Println("nagome wait: ", err)
+			os.Exit(1)
+		}
 		fmt.Println("cmd end")
 		os.Exit(0)
 	}()
