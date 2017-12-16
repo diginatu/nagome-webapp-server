@@ -7,9 +7,11 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -208,8 +210,6 @@ func cli() error {
 		return err
 	}
 
-	fmt.Println(c.RootURI)
-
 	go func() {
 		io.Copy(os.Stderr, ngme)
 	}()
@@ -261,9 +261,15 @@ func cli() error {
 	// serve
 	http.Handle("/ws", websocket.Handler(BridgeServer))
 	http.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir(c.RootDir))))
-	err = http.ListenAndServe(":"+c.Port, nil)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		panic("ListenAndServe: " + err.Error())
+		panic("tcp listen: " + err.Error())
+	}
+	fmt.Println("http://" + path.Join(listener.Addr().String(), "app", c.RootURI))
+	err = http.Serve(listener, nil)
+	if err != nil {
+		panic("http serve: " + err.Error())
 	}
 
 	return nil
