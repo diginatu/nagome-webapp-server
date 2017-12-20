@@ -266,7 +266,7 @@ func cli() error {
 	http.Handle("/ws", websocket.Handler(BridgeServer))
 	http.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir(c.RootDir))))
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := net.Listen("tcp", "127.0.0.1:"+c.Port)
 	if err != nil {
 		panic("tcp listen: " + err.Error())
 	}
